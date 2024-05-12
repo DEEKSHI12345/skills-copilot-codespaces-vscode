@@ -1,59 +1,40 @@
-//create web server
-const express = require('express');
-const app = express();
-app.use(express.json());
-//import data
-const comments = require('./data/comments');
-//import functions
-const { getNewId, getNewDate } = require('./utils');
-// Path: /comments
-//GET method
-app.get('/comments', (req, res) => {
-    res.json(comments);
-});
-//POST method
-app.post('/comments', (req, res) => {
-    const { body } = req;
-    if (!body.text) {
-        return res.status(400).json({ msg: 'Text is required' });
+//create wb server
+var express = require('express');
+var fs = require('fs');
+var app = express();
+var bodyParser = require('body-parser');
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(__dirname + '/public'));
+
+//define the port number
+var port = 3000;
+
+//define the path to the comments file
+var COMMENTS_FILE = __dirname + '/comments.json';
+
+//get the comments from the json file
+app.get('/api/comments', function(req, res) {
+  fs.readFile(COMMENTS_FILE, function(err, data) {
+    if (err) {
+      console.error(err);
+      process.exit(1);
     }
-    const newComment = {
-        id: getNewId(comments),
-        text: body.text,
-        date: getNewDate(),
-    };
-    comments.push(newComment);
-    res.json(newComment);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.json(JSON.parse(data));
+  });
 });
-//GET method
-app.get('/comments/:id', (req, res) => {
-    const comment = comments.find(comment => comment.id === parseInt(req.params.id));
-    if (!comment) {
-        return res.status(404).json({ msg: `Comment with id ${req.params.id} not found` });
-    }
-    res.json(comment);
+
+//post a new comment
+app.post('/api/comments', function(req, res) {
+    fs.readFile(COMMENTS_FILE, function(err, data) {
+        if (err) {
+            console.error(err);
+            process.exit(1);
+        }
+        var comments = JSON.parse(data);
+        var newComment = {
+            id: Date.now(),
+        };
+    }); // Add this closing curly brace
 });
-//PUT method
-app.put('/comments/:id', (req, res) => {
-    const { body } = req;
-    if (!body.text) {
-        return res.status(400).json({ msg: 'Text is required' });
-    }
-    const comment = comments.find(comment => comment.id === parseInt(req.params.id));
-    if (!comment) {
-        return res.status(404).json({ msg: `Comment with id ${req.params.id} not found` });
-    }
-    comment.text = body.text;
-    res.json(comment);
-});
-//DELETE method
-app.delete('/comments/:id', (req, res) => {
-    const index = comments.findIndex(comment => comment.id === parseInt(req.params.id));
-    if (index === -1) {
-        return res.status(404).json({ msg: `Comment with id ${req.params.id} not found` });
-    }
-    comments.splice(index, 1);
-    res.json({ msg: `Comment with id ${req.params.id} deleted` });
-});
-// Path: /comments/:id
-module.exports = app;
